@@ -5,7 +5,8 @@
 #include "inverted_pendulum.h"
 #include "tools.h"
 
-int main() {
+int main()
+{
   // Set initial conditions
   Eigen::VectorXd x_0(4);
   x_0 << 0, M_PI / 4, 0, 0;
@@ -21,7 +22,8 @@ int main() {
   std::vector<double> theta;
 
   // Simulate model
-  for (auto t : time) {
+  for (auto t : time)
+  {
     model.Update(t, 0);
 
     Eigen::VectorXd x = model.GetState();
@@ -30,7 +32,7 @@ int main() {
   }
 
   // Create Plot object
-  sciplot::Plot plot;
+  sciplot::Plot2D plot;
 
   // Set color palette
   plot.palette("set2");
@@ -38,8 +40,19 @@ int main() {
   // Draw theta over the simulation time
   plot.drawCurve(time, theta).label("theta(t)").lineWidth(4);
 
-  // Show the plot in a pop-up window
-  plot.show();
+  // Put both plots in a "figure" horizontally next to each other
+  sciplot::Figure figure = {{plot}};
+
+  // Create a canvas / drawing area to hold figure and plots
+  sciplot::Canvas canvas = {{figure}};
+  // Set color palette for all Plots that do not have a palette set (plot2) / the default palette
+  canvas.defaultPalette("set1");
+
+  // Show the canvas in a pop-up window
+  canvas.show();
+
+  // Save the plot to a SVG file
+  canvas.save("example.svg");
 
   // Export data to file
   Export("data.csv", {"time", "position", "angle"}, data);

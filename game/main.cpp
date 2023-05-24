@@ -7,7 +7,8 @@
 #include "pid.h"
 #include "lqr.h"
 
-int main() {
+int main()
+{
   sf::RenderWindow window(sf::VideoMode(640, 480), "Inverted Pendulum");
 
   // Set initial conditions
@@ -40,7 +41,8 @@ int main() {
 
   // Load font
   sf::Font font;
-  if (!font.loadFromFile("Roboto-Regular.ttf")) {
+  if (!font.loadFromFile("Roboto-Regular.ttf"))
+  {
     std::cout << "Failed to load font!\n";
   }
 
@@ -84,13 +86,16 @@ int main() {
   // Create a clock to run the simulation
   sf::Clock clock;
 
-  while (window.isOpen()) {
+  while (window.isOpen())
+  {
     sf::Event event;
-    while (window.pollEvent(event)) {
-      switch (event.type) {
-        case sf::Event::Closed:
-          window.close();
-          break;
+    while (window.pollEvent(event))
+    {
+      switch (event.type)
+      {
+      case sf::Event::Closed:
+        window.close();
+        break;
       }
     }
 
@@ -101,18 +106,24 @@ int main() {
     text.setString("Time   " + msg.substr(0, msg.find('.') + 2));
     const std::string action = pid ? "Action PID" : "Action LQR";
     type.setString(action);
-    if (time < 15) {
+    if (time < 5)
+    {
       double u = 0;
-      if (pid) {
+      if (pid)
+      {
         double angle = ptr->GetState()(1);
         double error = 0.0F - angle;
         c_ptr->UpdateError(time, error);
         u = c_ptr->TotalError();
-      } else {
+      }
+      else
+      {
         u = optimal.Control(ptr->GetState())(0, 0);
       }
       ptr->Update(time, u);
-    } else {
+    }
+    else
+    {
       delete ptr;
       delete c_ptr;
       ptr = new InvertedPendulum(x_0);
