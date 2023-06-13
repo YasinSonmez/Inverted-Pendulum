@@ -6,11 +6,12 @@
 #include "tools.h"
 #include "pid.h"
 #include "lqr.h"
+#include "/home/yasin/scarab/utils/scarab_markers.h"
+
+#define CONTROL_FREQUENCY 100.0 // hz
 
 int main()
 {
-  sf::RenderWindow window(sf::VideoMode(640, 480), "Inverted Pendulum");
-
   // Set initial conditions
   const double p_0 = 0;
   const double theta_0 = -5;
@@ -39,12 +40,14 @@ int main()
 
   bool pid = true;
 
+  /*
   // Load font
   sf::Font font;
   if (!font.loadFromFile("Roboto-Regular.ttf"))
   {
     std::cout << "Failed to load font!\n";
   }
+  sf::RenderWindow window(sf::VideoMode(640, 480), "Inverted Pendulum");
 
   // Create text to display simulation time
   sf::Text text;
@@ -82,59 +85,73 @@ int main()
   pole.setRotation(-theta_0);
   const sf::Color brown = sf::Color(0xCC, 0x99, 0x66);
   pole.setFillColor(brown);
+  */
 
   // Create a clock to run the simulation
   sf::Clock clock;
-
-  while (window.isOpen())
+  float time = clock.getElapsedTime().asSeconds();
+  float last_input_update_time = 0;
+  int roi_count = 0;
+  double u = 0;
+  while (1)
   {
-    sf::Event event;
-    while (window.pollEvent(event))
-    {
-      switch (event.type)
-      {
-      case sf::Event::Closed:
-        window.close();
-        break;
-      }
-    }
-
     // Update the simulation
-    sf::Time elapsed = clock.getElapsedTime();
-    const float time = elapsed.asSeconds();
+    time = clock.getElapsedTime().asSeconds();
+    /*
     const std::string msg = std::to_string(time);
     text.setString("Time   " + msg.substr(0, msg.find('.') + 2));
     const std::string action = pid ? "Action PID" : "Action LQR";
     type.setString(action);
-    if (time < 5)
+    */
+
+    // Control calculations every 1/CONTROL_REQUENCY seconds
+    if (time - last_input_update_time > 1.0 / CONTROL_FREQUENCY)
     {
-      double u = 0;
-      if (pid)
+      if (time < 5)
       {
-        double angle = ptr->GetState()(1);
-        double error = 0.0F - angle;
-        c_ptr->UpdateError(time, error);
-        u = c_ptr->TotalError();
+        // Control calculations starts here
+        scarab_roi_dump_begin();
+        u = 0;
+        if (pid)
+        {
+          double angle = ptr->GetState()(1);
+          double error = 0.0F - angle;
+          c_ptr->UpdateError(time, error);
+          u = c_ptr->TotalError();
+        }
+        else
+        {
+          u = optimal.Control(ptr->GetState())(0, 0);
+        }
+        // Control calculations ends here
+        scarab_roi_dump_end();
+        roi_count++;
+        std::cout << "ROI Count: " << roi_count << std::endl;
+        last_input_update_time = time;
+
+        // Apply input to the system
+        ptr->Update(time, u);
       }
       else
       {
-        u = optimal.Control(ptr->GetState())(0, 0);
+        break; // remove this
+        delete ptr;
+        delete c_ptr;
+        ptr = new InvertedPendulum(x_0);
+        c_ptr = new PID();
+        c_ptr->Init(kp, ki, kd);
+        clock.restart();
+        last_input_update_time = 0;
+        pid = (pid) ? false : true;
       }
-      ptr->Update(time, u);
     }
     else
     {
-      delete ptr;
-      delete c_ptr;
-      ptr = new InvertedPendulum(x_0);
-      c_ptr = new PID();
-      c_ptr->Init(kp, ki, kd);
-      clock.restart();
-      pid = (pid) ? false : true;
+      ptr->Update(time, u);
     }
-
     Eigen::VectorXd x = ptr->GetState();
 
+    /*
     // Update SFML drawings
     cart.setPosition(320.0F + 100 * x(0), 240.0F);
     pole.setPosition(320.0F + 100 * x(0), 240.0F);
@@ -147,6 +164,7 @@ int main()
     window.draw(text);
     window.draw(type);
     window.display();
+    */
   }
   return 0;
 }
