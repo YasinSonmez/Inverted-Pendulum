@@ -4,10 +4,19 @@ cmake_minimum_required (VERSION 3.5)
 project(inverted_pendulum)
 
 # Required to plot states
-add_definitions(-std=c++17)
+#add_definitions(-std=c++17)
+
+# set the C++ standard to C++ 20
+set(CMAKE_CXX_STANDARD 20)
+# set the C++ compiler to use O3
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
 # Add library
 add_subdirectory(src)
+
+# MPC package
+find_package(mpc++ CONFIG REQUIRED)
+include_directories(${mpc++_INCLUDE_DIRS})
 
 # Add executable to plot states
 find_package(sciplot)
@@ -33,7 +42,11 @@ configure_file(res/Roboto-Regular.ttf Roboto-Regular.ttf COPYONLY)
 # Add executable to open game environment
 find_package(SFML COMPONENTS graphics window system REQUIRED)
 add_executable(cartpole game/main.cpp)
+add_executable(cartpole_visual game/main_visual.cpp)
+add_executable(nlmpc_test game/nlmpc_test.cpp)
 target_link_libraries(cartpole source sfml-graphics sfml-window sfml-system)
+target_link_libraries(cartpole_visual source sfml-graphics sfml-window sfml-system)
+target_link_libraries(nlmpc_test source mpc++)
 
 # Add executable to run examples
 add_executable(example examples/lqr_design.cpp)
