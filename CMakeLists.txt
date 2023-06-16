@@ -45,7 +45,7 @@ add_executable(cartpole game/main.cpp)
 add_executable(cartpole_visual game/main_visual.cpp)
 add_executable(nlmpc_test game/nlmpc_test.cpp)
 target_link_libraries(cartpole source sfml-graphics sfml-window sfml-system)
-target_link_libraries(cartpole_visual source sfml-graphics sfml-window sfml-system)
+target_link_libraries(cartpole_visual source sfml-graphics sfml-window sfml-system mpc++)
 target_link_libraries(nlmpc_test source mpc++)
 
 # Add executable to run examples
