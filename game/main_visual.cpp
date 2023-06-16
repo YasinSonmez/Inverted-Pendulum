@@ -15,7 +15,7 @@ using json = nlohmann::json;
 int main()
 {
   // Open the parameters file
-  std::ifstream file("../game/main_visual_params.json");
+  std::ifstream file("../game/params.json");
 
   // Read the contents of the file into a string
   std::string str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
