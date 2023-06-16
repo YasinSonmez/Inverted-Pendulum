@@ -1,6 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
-
+#include <fstream>
 #include "Eigen/Dense"
 #include "inverted_pendulum.h"
 #include "tools.h"
@@ -8,19 +8,42 @@
 #include "lqr.h"
 #include "/home/yasin/scarab/utils/scarab_markers.h"
 #include "mpc/NLMPC.hpp"
+#include <nlohmann/json.hpp>
 
-#define CONTROL_FREQUENCY 25.0 // hz
+using json = nlohmann::json;
 
 int main()
 {
-  // Choose controller MPC, LQR or PID
-  std::string controller = "MPC";
-  // Set initial conditions
-  const double p_0 = 0;
-  const double theta_0 = 40;
+  // Open the parameters file
+  std::ifstream file("../game/main_visual_params.json");
+
+  // Read the contents of the file into a string
+  std::string str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+  // Parse the JSON string
+  json params = json::parse(str);
+
+  // Access the parameters and create variables for them
+  std::string controller = params["controller"];
+  const double control_frequecy = params["control_frequency"];
+  double simulation_length = params["simulation_length"];
+  const double p_0 = params["p_0"];
+  const double theta_0 = params["theta_0"];
+  // Constants
+  double M_ = params["M"];
+  double m_ = params["m"];
+  double J_ = params["J"];
+  double l_ = params["l"];
+  double c_ = params["c"];
+  double gamma_ = params["gamma"];
+  double g_ = params["g"];
+
   Eigen::VectorXd x_0(4);
   x_0 << p_0, to_radians(theta_0), 0, 0;
+  // Create a model with default parameters
+  InvertedPendulum *ptr = new InvertedPendulum(x_0);
 
+  // Design MPC controller
   // MPC Parameters
   constexpr int num_states = 4;
   constexpr int num_output = 0;
@@ -29,17 +52,13 @@ int main()
   constexpr int ctrl_hor = 5;
   constexpr int ineq_c = 0;
   constexpr int eq_c = 0;
+  double sampling_time = params["MPC"]["sampling_time"];
+  double input_cost_weight = params["MPC"]["input_cost_weight"];
 
-  double ts = 0.1;
-
-  mpc::NLMPC<
-      num_states, num_inputs, num_output,
-      pred_hor, ctrl_hor,
-      ineq_c, eq_c>
-      optsolver;
+  mpc::NLMPC<num_states, num_inputs, num_output, pred_hor, ctrl_hor, ineq_c, eq_c> optsolver;
 
   optsolver.setLoggerLevel(mpc::Logger::log_level::NORMAL);
-  optsolver.setContinuosTimeModel(ts);
+  optsolver.setContinuosTimeModel(sampling_time);
 
   auto stateEq = [&](
                      mpc::cvec<num_states> &x_dot_,
@@ -47,16 +66,8 @@ int main()
                      const mpc::cvec<num_inputs> &u)
   {
     // Constants
-    double M_ = 1.0;
-    double m_ = 1.0;
-    double J_ = 1.0;
-    double l_ = 1.0;
-    double c_ = 1.0;
-    double gamma_ = 1.0;
-    double g_ = 9.81;
     double M_t_ = M_ + m_;
     double J_t_ = J_ + m_ * std::pow(l_, 2);
-
     // Recover state parameters
     double x = x_(0);     // position of the base
     double theta = x_(1); // angle of the pendulum
@@ -92,7 +103,7 @@ int main()
                                      const mpc::mat<pred_hor + 1, num_output> &,
                                      const mpc::mat<pred_hor + 1, num_inputs> &u,
                                      double)
-                                 { return x.array().square().sum() + u.array().square().sum() / 100; });
+                                 { return x.array().square().sum() + u.array().square().sum() * input_cost_weight; });
 
   // MPC
   mpc::cvec<num_states> modelX, modeldX;
@@ -106,13 +117,10 @@ int main()
 
   auto r = optsolver.getLastResult();
 
-  // Set PID constants
-  const double kp = 100.0F;
-  const double ki = 50.0F;
-  const double kd = 10.0F;
-
-  // Create a model with default parameters
-  InvertedPendulum *ptr = new InvertedPendulum(x_0);
+  // Design PID controller
+  const double kp = params["PID"]["kp"];
+  const double ki = params["PID"]["ki"];
+  const double kd = params["PID"]["kd"];
   PID *c_ptr = new PID();
   c_ptr->Init(kp, ki, kd);
 
@@ -150,6 +158,7 @@ int main()
   const sf::Color turquoise = sf::Color(0x06, 0xC2, 0xAC);
   type.setFillColor(turquoise);
   type.setPosition(480.0F, 384.0F);
+  type.setString(controller);
 
   // Create a track for the cart
   sf::RectangleShape track(sf::Vector2f(640.0F, 2.0F));
@@ -179,73 +188,48 @@ int main()
   float last_input_update_time = 0;
   int roi_count = 0;
   double u = 0;
-  while (1)
+
+  // Simulation loop
+  while (time < simulation_length)
   {
     // Update the simulation
     time = clock.getElapsedTime().asSeconds();
-    ///*
     const std::string msg = std::to_string(time);
     text.setString("Time   " + msg.substr(0, msg.find('.') + 2));
-    type.setString(controller);
-    //*/
+
+    // Get state
+    Eigen::VectorXd x = ptr->GetState();
 
     // Control calculations every 1/CONTROL_REQUENCY seconds
-    if (time - last_input_update_time > 1.0 / CONTROL_FREQUENCY)
+    if (time - last_input_update_time > 1.0 / control_frequecy)
     {
-      if (time < 30)
+      // Control calculations starts here
+      // scarab_roi_dump_begin();
+      if (controller == "PID")
       {
-        // Control calculations starts here
-        // scarab_roi_dump_begin();
-        u = 0;
-        if (controller == "PID")
-        {
-          double angle = ptr->GetState()(1);
-          double error = 0.0F - angle;
-          c_ptr->UpdateError(time, error);
-          u = c_ptr->TotalError();
-        }
-        else if (controller == "LQR")
-        {
-          u = optimal.Control(ptr->GetState())(0, 0);
-        }
-        else if (controller == "MPC")
-        {
-          r = optsolver.step(modelX, r.cmd);
-          auto seq = optsolver.getOptimalSequence();
-          (void)seq;
-          u = r.cmd(0);
-          modelX = ptr->GetState();
-          // std::cout << "u: " << u << std::endl;
-          // std::cout << "x: " << modelX << std::endl;
-        }
-
-        // Control calculations ends here
-        // scarab_roi_dump_end();
-        // roi_count++;
-        // std::cout << "ROI Count: " << roi_count << std::endl;
-        last_input_update_time = time;
-
-        // Apply input to the system
-        ptr->Update(time, u);
+        double angle = x(1);
+        double error = 0.0F - angle;
+        c_ptr->UpdateError(time, error);
+        u = c_ptr->TotalError();
       }
-      else
+      else if (controller == "LQR")
       {
-        break; // remove this
-        delete ptr;
-        delete c_ptr;
-        ptr = new InvertedPendulum(x_0);
-        c_ptr = new PID();
-        c_ptr->Init(kp, ki, kd);
-        clock.restart();
-        last_input_update_time = 0;
-        // pid = (pid) ? false : true;
+        u = optimal.Control(x)(0, 0);
       }
+      else if (controller == "MPC")
+      {
+        modelX = x;
+        r = optsolver.step(modelX, r.cmd);
+        u = r.cmd(0);
+      }
+      // Control calculations ends here
+      // scarab_roi_dump_end();
+      // roi_count++;
+      // std::cout << "ROI Count: " << roi_count << std::endl;
+      last_input_update_time = time;
     }
-    else
-    {
-      ptr->Update(time, u);
-    }
-    Eigen::VectorXd x = ptr->GetState();
+    // Apply input to the system
+    ptr->Update(time, u);
 
     ///*
     // Update SFML drawings

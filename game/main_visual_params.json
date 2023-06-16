@@ -1,0 +1,23 @@
+{
+    "controller": "LQR",
+    "control_frequency": 25.0,
+    "simulation_length": 30,
+    "theta_0": 20.0,
+    "p_0": 0.0,
+    "M": 1.0,
+    "m": 1.0,
+    "J": 1.0,
+    "l": 1.0,
+    "c": 1.0,
+    "gamma": 1.0,
+    "g": 9.81,
+    "MPC": {
+        "sampling_time": 0.1,
+        "input_cost_weight": 0.1
+    },
+    "PID": {
+        "kp": 100.0,
+        "ki": 50.0,
+        "kd": 10.0
+    }
+}
