@@ -28,10 +28,10 @@ A simple simulator to test control algorithms in C++. There are currently three 
 ## Dependencies
 - cmake
 - make
-- gcc/g++
+- gcc/g++ (Version >10.3.0 required, Version 11 is preferred)
 - [eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page) (needs to  be copied to /usr/local/include directory)
 - [libmpc++](https://github.com/nicolapiccinelli/libmpc) (even though libmpc++ is header only, it needs to be installed using `make install` to work in this project)
-- [sfml](https://www.sfml-dev.org/)
+- [sfml](https://www.sfml-dev.org/) (for graphics)
 - [googletest](https://github.com/google/googletest) (optional)
 - [sciplot](https://github.com/sciplot/sciplot) (optional)
 
