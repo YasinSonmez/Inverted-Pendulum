@@ -30,18 +30,18 @@ int main()
   const double p_0 = params["p_0"];
   const double theta_0 = params["theta_0"];
   // Constants
-  double M_ = params["M"];
-  double m_ = params["m"];
-  double J_ = params["J"];
-  double l_ = params["l"];
-  double c_ = params["c"];
-  double gamma_ = params["gamma"];
-  double g_ = params["g"];
+  double M = params["M"];
+  double m = params["m"];
+  double J = params["J"];
+  double l = params["l"];
+  double c = params["c"];
+  double gamma = params["gamma"];
+  double g = params["g"];
 
   Eigen::VectorXd x_0(4);
   x_0 << p_0, to_radians(theta_0), 0, 0;
   // Create a model with default parameters
-  InvertedPendulum *ptr = new InvertedPendulum(x_0);
+  InvertedPendulum *ptr = new InvertedPendulum(M, m, J, l, c, gamma, x_0);
 
   // Design MPC controller
   // MPC Parameters
@@ -66,8 +66,8 @@ int main()
                      const mpc::cvec<num_inputs> &u)
   {
     // Constants
-    double M_t_ = M_ + m_;
-    double J_t_ = J_ + m_ * std::pow(l_, 2);
+    double M_t = M + m;
+    double J_t = J + m * std::pow(l, 2);
     // Recover state parameters
     double x = x_(0);     // position of the base
     double theta = x_(1); // angle of the pendulum
@@ -78,18 +78,18 @@ int main()
     double s_t = std::sin(theta);
     double c_t = std::cos(theta);
     double o_2 = std::pow(omega, 2);
-    double l_2 = std::pow(l_, 2);
+    double l_2 = std::pow(l, 2);
 
     // Calculate derivatives
     x_dot_(0) = vx;
     x_dot_(1) = omega;
-    x_dot_(2) = (-m_ * l_ * s_t * o_2 + m_ * g_ * (m_ * l_2 / J_t_) * s_t * c_t -
-                 c_ * vx - (gamma_ / J_t_) * m_ * l_ * c_t * omega + u(0)) /
-                (M_t_ - m_ * (m_ * l_2 / J_t_) * c_t * c_t);
+    x_dot_(2) = (-m * l * s_t * o_2 + m * g * (m * l_2 / J_t) * s_t * c_t -
+                 c * vx - (gamma / J_t) * m * l * c_t * omega + u(0)) /
+                (M_t - m * (m * l_2 / J_t) * c_t * c_t);
     x_dot_(3) =
-        (-m_ * l_2 * s_t * c_t * o_2 + M_t_ * g_ * l_ * s_t - c_ * l_ * c_t * vx -
-         gamma_ * (M_t_ / m_) * omega + l_ * c_t * u(0)) /
-        (J_t_ * (M_t_ / m_) - m_ * (l_ * c_t) * (l_ * c_t));
+        (-m * l_2 * s_t * c_t * o_2 + M_t * g * l * s_t - c * l * c_t * vx -
+         gamma * (M_t / m) * omega + l * c_t * u(0)) /
+        (J_t * (M_t / m) - m * (l * c_t) * (l * c_t));
   };
 
   optsolver.setStateSpaceFunction([&](
