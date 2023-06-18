@@ -13,7 +13,13 @@
     "g": 9.81,
     "MPC": {
         "sampling_time": 0.1,
-        "input_cost_weight": 0.1
+        "state_cost_weights": [
+            0.2,
+            1,
+            0.1,
+            0.01
+        ],
+        "input_cost_weight": 0.0005
     },
     "PID": {
         "kp": 100.0,

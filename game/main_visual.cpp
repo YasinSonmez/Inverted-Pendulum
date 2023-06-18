@@ -9,6 +9,7 @@
 #include "/home/yasin/scarab/utils/scarab_markers.h"
 #include "mpc/NLMPC.hpp"
 #include <nlohmann/json.hpp>
+// #include "dr_api.h"
 
 using json = nlohmann::json;
 
@@ -103,7 +104,10 @@ int main()
                                      const mpc::mat<pred_hor + 1, num_output> &,
                                      const mpc::mat<pred_hor + 1, num_inputs> &u,
                                      double)
-                                 { return x.array().square().sum() + u.array().square().sum() * input_cost_weight; });
+                                 { 
+                                    std::vector<double> w = params["MPC"]["state_cost_weights"].get<std::vector<double>>();
+                                    Eigen::VectorXd state_cost_weights = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(w.data(), w.size()); // create a weight vector
+                                    return (x * state_cost_weights.asDiagonal()).array().square().sum() + u.array().square().sum() * input_cost_weight; });
 
   // MPC
   mpc::cvec<num_states> modelX, modeldX;
