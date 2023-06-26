@@ -1,7 +1,13 @@
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 
-# Set project name
-project(inverted_pendulum)
+project(main)
+
+link_directories($ENV{DYNAMORIO_HOME}/tools/lib64/release)
+link_directories($ENV{DYNAMORIO_HOME}/ext/lib64/release)
+
+if(COMMAND cmake_policy)
+	cmake_policy(SET CMP0003 NEW)
+endif(COMMAND cmake_policy)
 
 # set the C++ standard to C++ 20
 set(CMAKE_CXX_STANDARD 20)
@@ -11,38 +17,60 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 # Add library
 add_subdirectory(src)
 
+add_executable(main main.cpp)
+
 # MPC package
 find_package(mpc++ CONFIG REQUIRED)
 include_directories(${mpc++_INCLUDE_DIRS})
 
-# Add executable to plot states
-find_package(sciplot)
-if(sciplot_FOUND)
-  add_executable(plot src/main.cpp)
-  target_link_libraries(plot sciplot::sciplot source)
-else()
-  message("sciplot need to be installed to generate the plot executable")
-endif()
+find_package(DynamoRIO)
+if (NOT DynamoRIO_FOUND)
+  message(FATAL_ERROR "DynamoRIO package required to build")
+endif(NOT DynamoRIO_FOUND)
 
-# Add executable to run unit tests
-find_package(GTest)
-if(GTest_FOUND)
-  add_executable(test tests/main.cpp tests/inverted_pendulum_test.cpp)
-  target_link_libraries(test source ${GTEST_LIBRARIES} pthread)
-else()
-  message("gloogletest need to be installed to generate the test executable")
-endif()
+find_package(ZLIB)
+if (ZLIB_FOUND)
+  message(STATUS "Found zlib")
+endif ()
 
-# Additional resources like images and fonts
-configure_file(res/Roboto-Regular.ttf Roboto-Regular.ttf COPYONLY)
+find_library(libsnappy snappy)
+if (libsnappy)
+  message(STATUS "Found snappy: ${libsnappy}")
+endif ()
+
+find_library(liblz4 lz4)
+if (liblz4)
+  message(STATUS "Found liblz4: ${liblz4}")
+endif ()
+
+configure_DynamoRIO_static(main)
+
+use_DynamoRIO_static_client(main drmemtrace_static)
+
+if (ZLIB_FOUND)
+  target_link_libraries(main ${ZLIB_LIBRARIES})
+endif ()
+if (libsnappy)
+  target_link_libraries(main snappy)
+endif ()
+if (liblz4)
+  target_link_libraries(main lz4)
+endif ()
+
+use_DynamoRIO_static_client(main drmgr_static)
+use_DynamoRIO_static_client(main drreg_static)
+use_DynamoRIO_static_client(main drbbdup_static)
+use_DynamoRIO_static_client(main drutil_static)
+use_DynamoRIO_static_client(main drx_static)
+use_DynamoRIO_static_client(main drwrap_static)
+use_DynamoRIO_static_client(main drsyms_static)
+use_DynamoRIO_static_client(main drpttracer_static)
+use_DynamoRIO_static_client(main drstatecmp_static)
+use_DynamoRIO_static_client(main drcovlib_static)
 
 # Add executable to open game environment
 find_package(SFML COMPONENTS graphics window system REQUIRED)
-add_executable(cartpole game/main.cpp)
-add_executable(cartpole_visual game/main_visual.cpp)
-target_link_libraries(cartpole source sfml-graphics sfml-window sfml-system mpc++)
-target_link_libraries(cartpole_visual source sfml-graphics sfml-window sfml-system mpc++)
+target_link_libraries(main source sfml-graphics sfml-window sfml-system mpc++)
 
-# Add executable to run examples
-add_executable(example examples/lqr_design.cpp)
-target_link_libraries(example source)
+# Additional resources like images and fonts
+configure_file(res/Roboto-Regular.ttf Roboto-Regular.ttf COPYONLY)

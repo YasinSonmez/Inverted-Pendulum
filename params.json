@@ -1,8 +1,9 @@
 {
+    "record_trace": false,
     "controller": "MPC",
     "control_frequency": 25.0,
-    "simulation_length": 30,
-    "theta_0": 20.0,
+    "simulation_length": 5,
+    "theta_0": 10.0,
     "p_0": 0.0,
     "M": 1.0,
     "m": 1.0,
