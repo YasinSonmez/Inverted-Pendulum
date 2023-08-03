@@ -153,6 +153,7 @@ int main()
     optimal.R_ = Eigen::MatrixXd::Identity(1, 1);
     optimal.Compute();
 
+    /*
     // Load font
     sf::Font font;
     if (!font.loadFromFile("Roboto-Regular.ttf"))
@@ -198,6 +199,7 @@ int main()
     pole.setRotation(-theta_0);
     const sf::Color brown = sf::Color(0xCC, 0x99, 0x66);
     pole.setFillColor(brown);
+    */
 
     // Create a clock to run the simulation
     sf::Clock clock;
@@ -221,8 +223,7 @@ int main()
             // Control calculations starts here
             if (record_trace)
             {
-                dr_app_setup();
-                dr_app_start();
+                dr_app_setup_and_start();
             }
             if (controller == "PID")
             {
@@ -253,6 +254,7 @@ int main()
         // Apply input to the system
         ptr->Update(time, u);
 
+        /*
         const std::string msg = std::to_string(time);
         text.setString("Time   " + msg.substr(0, msg.find('.') + 2));
         // Update SFML drawings
@@ -267,6 +269,7 @@ int main()
         window.draw(text);
         window.draw(type);
         window.display();
+        */
     }
     return 0;
 }
