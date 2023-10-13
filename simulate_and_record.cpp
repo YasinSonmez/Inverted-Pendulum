@@ -10,17 +10,31 @@
 #include "lqr.h"
 #include "mpc/NLMPC.hpp"
 #include <nlohmann/json.hpp>
-#include "dr_api.h"
 
 using json = nlohmann::json;
 
-bool my_setenv(const char *var, const char *value)
+void saveToCSV(const Eigen::MatrixXd &matrix, const std::string &filename)
 {
-#ifdef UNIX
-    return setenv(var, value, 1 /*override*/) == 0;
-#else
-    return SetEnvironmentVariable(var, value) == TRUE;
-#endif
+    std::ofstream file(filename);
+
+    if (!file.is_open())
+    {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return;
+    }
+
+    for (int i = 0; i < matrix.rows(); ++i)
+    {
+        for (int j = 0; j < matrix.cols(); ++j)
+        {
+            if (j > 0)
+                file << ",";
+            file << matrix(i, j);
+        }
+        file << "\n";
+    }
+
+    file.close();
 }
 
 Eigen::MatrixXd loadFromCSV(const std::string &filename)
@@ -69,12 +83,6 @@ Eigen::MatrixXd loadFromCSV(const std::string &filename)
 
 int main(int argc, char *argv[])
 {
-    /* We also test -rstats_to_stderr */
-    if (!my_setenv("DYNAMORIO_OPTIONS",
-                   "-stderr_mask 0xc -rstats_to_stderr "
-                   "-client_lib ';;-offline'"))
-        std::cerr << "failed to set env var!\n";
-
     // Open the parameters file
     std::ifstream file("../params.json");
 
@@ -84,9 +92,8 @@ int main(int argc, char *argv[])
     // Parse the JSON string
     json params = json::parse(str);
 
-    // filename to laod matrix
+    // filename to save matrix
     std::string filename = "../state_and_input_matrix.csv";
-
     // Access the parameters and create variables for them
     std::string controller = params["controller"];
     bool record_trace = params["record_trace"];
@@ -104,10 +111,10 @@ int main(int argc, char *argv[])
     double g = params["g"];
 
     // Create a vector to store x_t, u_t in each iteration
+    std::vector<Eigen::VectorXd> xu_vector;
     Eigen::VectorXd x_0(4);
     if (argc == 1)
     {
-        int start_idx = 0;
         x_0 << p_0, to_radians(theta_0), 0, 0;
     }
     else if (argc == 2)
@@ -214,6 +221,52 @@ int main(int argc, char *argv[])
     optimal.R_ = Eigen::MatrixXd::Identity(1, 1);
     optimal.Compute();
 
+    // Load font
+    sf::Font font;
+    if (!font.loadFromFile("Roboto-Regular.ttf"))
+    {
+        std::cout << "Failed to load font!\n";
+    }
+    sf::RenderWindow window(sf::VideoMode(640, 480), "Inverted Pendulum");
+
+    // Create text to display simulation time
+    sf::Text text;
+    text.setFont(font);
+    text.setCharacterSize(24);
+    const sf::Color grey = sf::Color(0x7E, 0x7E, 0x7E);
+    text.setFillColor(grey);
+    text.setPosition(480.0F, 360.0F);
+
+    // Create text to display controller type
+    sf::Text type;
+    type.setFont(font);
+    type.setCharacterSize(24);
+    const sf::Color turquoise = sf::Color(0x06, 0xC2, 0xAC);
+    type.setFillColor(turquoise);
+    type.setPosition(480.0F, 384.0F);
+    type.setString(controller);
+
+    // Create a track for the cart
+    sf::RectangleShape track(sf::Vector2f(640.0F, 2.0F));
+    track.setOrigin(320.0F, 1.0F);
+    track.setPosition(320.0F, 240.0F);
+    const sf::Color light_grey = sf::Color(0xAA, 0xAA, 0xAA);
+    track.setFillColor(light_grey);
+
+    // Create the cart of the inverted pendulum
+    sf::RectangleShape cart(sf::Vector2f(100.0F, 100.0F));
+    cart.setOrigin(50.0F, 50.0F);
+    cart.setPosition(320.0F, 240.0F);
+    cart.setFillColor(sf::Color::Black);
+
+    // Create the pole of the inverted pendulum
+    sf::RectangleShape pole(sf::Vector2f(20.0F, 200.0F));
+    pole.setOrigin(10.0F, 200.0F);
+    pole.setPosition(320.0F, 240.0F);
+    pole.setRotation(-theta_0);
+    const sf::Color brown = sf::Color(0xCC, 0x99, 0x66);
+    pole.setFillColor(brown);
+
     // Create a clock to run the simulation
     sf::Clock clock;
     float time = clock.getElapsedTime().asSeconds();
@@ -234,10 +287,6 @@ int main(int argc, char *argv[])
         if (time - last_input_update_time > 1.0 / control_frequecy || roi_count == 0)
         {
             // Control calculations starts here
-            if (record_trace)
-            {
-                dr_app_setup_and_start();
-            }
             if (controller == "PID")
             {
                 double angle = x(1);
@@ -255,13 +304,46 @@ int main(int argc, char *argv[])
                 r = optsolver.step(modelX, r.cmd);
                 u = r.cmd(0);
             }
-            if (record_trace)
-            {
-                dr_app_stop_and_cleanup();
-            }
             // Control calculations ends here
-            break;
+            roi_count++;
+            std::cout << "ROI Count: " << roi_count << std::endl;
+            last_input_update_time = time;
+
+            // Record state and input x_t,u_t
+            Eigen::VectorXd xu(x.size() + 1);
+            xu << x, u;
+            xu_vector.push_back(xu);
         }
+
+        // Apply input to the system
+        ptr->Update(time, u);
+
+        const std::string msg = std::to_string(time);
+        text.setString("Time   " + msg.substr(0, msg.find('.') + 2));
+        // Update SFML drawings
+        cart.setPosition(320.0F + 100 * x(0), 240.0F);
+        pole.setPosition(320.0F + 100 * x(0), 240.0F);
+        pole.setRotation(to_degrees(-x(1)));
+
+        window.clear(sf::Color::White);
+        window.draw(track);
+        window.draw(cart);
+        window.draw(pole);
+        window.draw(text);
+        window.draw(type);
+        window.display();
     }
+    // Combine the VectorXd objects into a matrix
+    Eigen::MatrixXd xu_matrix(xu_vector.size(), xu_vector[0].size());
+    for (size_t i = 0; i < xu_vector.size(); ++i)
+    {
+        xu_matrix.row(i) = xu_vector[i];
+    }
+    // Print the resulting matrix
+    std::cout << "Resulting matrix:\n"
+              << xu_matrix << std::endl;
+
+    // Save to CSV
+    saveToCSV(xu_matrix, filename);
     return 0;
 }

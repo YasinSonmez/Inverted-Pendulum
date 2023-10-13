@@ -18,6 +18,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 add_subdirectory(src)
 
 add_executable(main main.cpp)
+add_executable(simulate_and_record simulate_and_record.cpp)
 
 # MPC package
 find_package(mpc++ CONFIG REQUIRED)
@@ -71,6 +72,10 @@ use_DynamoRIO_static_client(main drcovlib_static)
 # Add executable to open game environment
 find_package(SFML COMPONENTS graphics window system REQUIRED)
 target_link_libraries(main source sfml-graphics sfml-window sfml-system mpc++)
+target_link_libraries(simulate_and_record source sfml-graphics sfml-window sfml-system mpc++)
 
 # Additional resources like images and fonts
 configure_file(res/Roboto-Regular.ttf Roboto-Regular.ttf COPYONLY)
+
+set_target_properties(main PROPERTIES CXX_STANDARD 20 CXX_EXTENSIONS OFF)
+set_target_properties(simulate_and_record PROPERTIES CXX_STANDARD 20 CXX_EXTENSIONS OFF)
