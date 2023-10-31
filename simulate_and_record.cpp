@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
     std::string controller = params["controller"];
     bool record_trace = params["record_trace"];
     const double control_frequecy = params["control_frequency"];
-    double simulation_length = params["simulation_length"];
+    int simulation_steps = params["simulation_steps"];
     const double p_0 = params["p_0"];
     const double theta_0 = params["theta_0"];
     // Constants
@@ -117,13 +117,18 @@ int main(int argc, char *argv[])
     {
         x_0 << p_0, to_radians(theta_0), 0, 0;
     }
-    else if (argc == 2)
+    else if (argc >= 2)
     {
         Eigen::MatrixXd xu_matrix_tmp = loadFromCSV(filename);
         int start_idx = std::stoi(argv[1]);
         x_0 << xu_matrix_tmp(start_idx, 0), xu_matrix_tmp(start_idx, 1),
             xu_matrix_tmp(start_idx, 2), xu_matrix_tmp(start_idx, 3);
+        if(argc == 3)
+        {
+            simulation_steps = std::stoi(argv[2]);
+        }
     }
+    std::cout<<simulation_steps<<"sadsad";
     // Create a model with default parameters
     InvertedPendulum *ptr = new InvertedPendulum(M, m, J, l, c, gamma, x_0);
 
@@ -275,7 +280,7 @@ int main(int argc, char *argv[])
     double u = 0;
 
     // Simulation loop
-    while (time < simulation_length)
+    while (roi_count  < simulation_steps)
     {
         // Update the simulation
         time = clock.getElapsedTime().asSeconds();
