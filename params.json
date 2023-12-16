@@ -1,8 +1,8 @@
 {
-    "record_trace": false,
-    "controller": "MPC",
+    "record_trace": true,
+    "controller": "LQR",
     "control_frequency": 25.0,
-    "simulation_length": 5,
+    "simulation_steps": 100,
     "theta_0": 10.0,
     "p_0": 0.0,
     "M": 1.0,

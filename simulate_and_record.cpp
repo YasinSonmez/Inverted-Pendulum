@@ -15,7 +15,7 @@ using json = nlohmann::json;
 
 void saveToCSV(const Eigen::MatrixXd &matrix, const std::string &filename)
 {
-    std::ofstream file(filename);
+    std::ofstream file(filename, std::ios::app); // Append mode
 
     if (!file.is_open())
     {
@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
 
     // filename to save matrix
     std::string filename = "../state_and_input_matrix.csv";
+    std::string global_filename = "../../state_and_input_matrix.csv";
     // Access the parameters and create variables for them
     std::string controller = params["controller"];
     bool record_trace = params["record_trace"];
@@ -119,10 +120,17 @@ int main(int argc, char *argv[])
     }
     else if (argc >= 2)
     {
-        Eigen::MatrixXd xu_matrix_tmp = loadFromCSV(filename);
-        int start_idx = std::stoi(argv[1]);
-        x_0 << xu_matrix_tmp(start_idx, 0), xu_matrix_tmp(start_idx, 1),
-            xu_matrix_tmp(start_idx, 2), xu_matrix_tmp(start_idx, 3);
+        if (std::stoi(argv[1])==0)
+        {
+            x_0 << p_0, to_radians(theta_0), 0, 0;
+        }
+        else{
+            Eigen::MatrixXd xu_matrix_tmp = loadFromCSV(global_filename);
+            int start_idx = std::stoi(argv[1]);
+            x_0 << xu_matrix_tmp(start_idx, 0), xu_matrix_tmp(start_idx, 1),
+                xu_matrix_tmp(start_idx, 2), xu_matrix_tmp(start_idx, 3);
+        }
+
         if(argc == 3)
         {
             simulation_steps = std::stoi(argv[2]);
@@ -350,5 +358,6 @@ int main(int argc, char *argv[])
 
     // Save to CSV
     saveToCSV(xu_matrix, filename);
+    saveToCSV(xu_matrix, global_filename);
     return 0;
 }

@@ -86,6 +86,7 @@ int main(int argc, char *argv[])
 
     // filename to laod matrix
     std::string filename = "../state_and_input_matrix.csv";
+    std::string global_filename = "../../state_and_input_matrix.csv";
 
     // Access the parameters and create variables for them
     std::string controller = params["controller"];
@@ -112,7 +113,7 @@ int main(int argc, char *argv[])
     }
     else if (argc >= 2)
     {
-        Eigen::MatrixXd xu_matrix_tmp = loadFromCSV(filename);
+        Eigen::MatrixXd xu_matrix_tmp = loadFromCSV(global_filename);
         int start_idx = std::stoi(argv[1]);
         x_0 << xu_matrix_tmp(start_idx, 0), xu_matrix_tmp(start_idx, 1),
             xu_matrix_tmp(start_idx, 2), xu_matrix_tmp(start_idx, 3);
