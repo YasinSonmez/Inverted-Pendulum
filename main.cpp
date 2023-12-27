@@ -106,20 +106,27 @@ int main(int argc, char *argv[])
 
     // Create a vector to store x_t, u_t in each iteration
     Eigen::VectorXd x_0(4);
+    int start_idx = 0;
+    double u_start = 0;
     if (argc == 1)
     {
-        int start_idx = 0;
         x_0 << p_0, to_radians(theta_0), 0, 0;
     }
     else if (argc >= 2)
     {
-        Eigen::MatrixXd xu_matrix_tmp = loadFromCSV(global_filename);
-        int start_idx = std::stoi(argv[1]);
-        x_0 << xu_matrix_tmp(start_idx, 0), xu_matrix_tmp(start_idx, 1),
-            xu_matrix_tmp(start_idx, 2), xu_matrix_tmp(start_idx, 3);
-        if(argc == 3)
+        Eigen::MatrixXd xu_matrix_tmp;
+        xu_matrix_tmp = loadFromCSV(global_filename);
+        start_idx = std::stoi(argv[1]);
+        x_0 << xu_matrix_tmp(start_idx, 1), xu_matrix_tmp(start_idx, 2),
+            xu_matrix_tmp(start_idx, 3), xu_matrix_tmp(start_idx, 4);
+        if (argc >= 3)
         {
             simulation_steps = std::stoi(argv[2]);
+        }
+        if (argc == 4)
+        {
+            // If a 4th argument is given, use the last control input
+            u_start = xu_matrix_tmp(start_idx - 1, 5);
         }
     }
 
@@ -244,7 +251,12 @@ int main(int argc, char *argv[])
             {
                 dr_app_setup_and_start();
             }
-            if (controller == "PID")
+            if (argc == 4 && roi_count == 0)
+            {
+                // If a 4th argument is given, use the last control input
+                u = u_start;
+            }
+            else if (controller == "PID")
             {
                 double angle = x(1);
                 double error = 0.0F - angle;
@@ -265,6 +277,10 @@ int main(int argc, char *argv[])
             {
                 dr_app_stop_and_cleanup();
             }
+            // Print the resulting matrix
+            std::cout << "State :\n"
+                      << x << std::endl;
+            std::cout << "Control output for this timestep: " << u << std::endl;
             // Control calculations ends here
             break;
         }

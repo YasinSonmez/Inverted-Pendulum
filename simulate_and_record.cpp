@@ -37,6 +37,56 @@ void saveToCSV(const Eigen::MatrixXd &matrix, const std::string &filename)
     file.close();
 }
 
+void removeLastRows_saveToCSV(const Eigen::MatrixXd &matrix, const std::string &filename, int start_idx)
+{
+    // Read existing content (first start_idx rows)
+    std::ifstream existingFile(filename);
+    std::vector<std::string> existingContent;
+
+    if (existingFile.is_open())
+    {
+        std::string line;
+        for (size_t i = 0; i < start_idx; ++i)
+        {
+            std::getline(existingFile, line);
+            existingContent.push_back(line);
+        }
+        existingFile.close();
+    }
+
+    // Open the file in truncate mode to clear existing content
+    std::ofstream file(filename, std::ios::trunc);
+
+    if (!file.is_open())
+    {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return;
+    }
+
+    // Write back the existing content (first start_idx rows)
+    if (existingContent.size() > 0)
+    {
+        for (size_t i = 0; i < existingContent.size(); ++i)
+        {
+            file << existingContent[i] << "\n";
+        }
+    }
+
+    // Write the new matrix content to the file
+    for (int i = 0; i < matrix.rows(); ++i)
+    {
+        for (int j = 0; j < matrix.cols(); ++j)
+        {
+            if (j > 0)
+                file << ",";
+            file << matrix(i, j);
+        }
+        file << "\n";
+    }
+
+    file.close();
+}
+
 Eigen::MatrixXd loadFromCSV(const std::string &filename)
 {
     std::ifstream file(filename);
@@ -114,29 +164,38 @@ int main(int argc, char *argv[])
     // Create a vector to store x_t, u_t in each iteration
     std::vector<Eigen::VectorXd> xu_vector;
     Eigen::VectorXd x_0(4);
+    int start_idx = 0;
+    double u_start = 0;
     if (argc == 1)
     {
         x_0 << p_0, to_radians(theta_0), 0, 0;
     }
     else if (argc >= 2)
     {
-        if (std::stoi(argv[1])==0)
+        Eigen::MatrixXd xu_matrix_tmp;
+        if (std::stoi(argv[1]) == 0)
         {
             x_0 << p_0, to_radians(theta_0), 0, 0;
         }
-        else{
-            Eigen::MatrixXd xu_matrix_tmp = loadFromCSV(global_filename);
-            int start_idx = std::stoi(argv[1]);
-            x_0 << xu_matrix_tmp(start_idx, 0), xu_matrix_tmp(start_idx, 1),
-                xu_matrix_tmp(start_idx, 2), xu_matrix_tmp(start_idx, 3);
+        else
+        {
+            xu_matrix_tmp = loadFromCSV(global_filename);
+            start_idx = std::stoi(argv[1]);
+            x_0 << xu_matrix_tmp(start_idx, 1), xu_matrix_tmp(start_idx, 2),
+                xu_matrix_tmp(start_idx, 3), xu_matrix_tmp(start_idx, 4);
         }
 
-        if(argc == 3)
+        if (argc >= 3)
         {
             simulation_steps = std::stoi(argv[2]);
         }
+        if (argc == 4)
+        {
+            // If a 4th argument is given, use the last control input
+            u_start = xu_matrix_tmp(start_idx - 1, 5);
+        }
     }
-    std::cout<<simulation_steps<<"sadsad";
+    std::cout << "Doing simulation for this number of timesteps: " << simulation_steps << std::endl;
     // Create a model with default parameters
     InvertedPendulum *ptr = new InvertedPendulum(M, m, J, l, c, gamma, x_0);
 
@@ -288,7 +347,7 @@ int main(int argc, char *argv[])
     double u = 0;
 
     // Simulation loop
-    while (roi_count  < simulation_steps)
+    while (roi_count < simulation_steps)
     {
         // Update the simulation
         time = clock.getElapsedTime().asSeconds();
@@ -300,7 +359,11 @@ int main(int argc, char *argv[])
         if (time - last_input_update_time > 1.0 / control_frequecy || roi_count == 0)
         {
             // Control calculations starts here
-            if (controller == "PID")
+            if (argc == 4 && roi_count == 0)
+            {
+                u = u_start;
+            }
+            else if (controller == "PID")
             {
                 double angle = x(1);
                 double error = 0.0F - angle;
@@ -346,18 +409,25 @@ int main(int argc, char *argv[])
         window.draw(type);
         window.display();
     }
-    // Combine the VectorXd objects into a matrix
-    Eigen::MatrixXd xu_matrix(xu_vector.size(), xu_vector[0].size());
+    // Record the last state
+    // Get state
+    Eigen::VectorXd x = ptr->GetState();
+    Eigen::VectorXd xu(x.size() + 1);
+    xu << x, 0.0;
+    xu_vector.push_back(xu);
+    Eigen::MatrixXd xu_matrix(xu_vector.size(), xu_vector[0].size() + 1); // +1 for the timestep column
+
     for (size_t i = 0; i < xu_vector.size(); ++i)
     {
-        xu_matrix.row(i) = xu_vector[i];
+        xu_matrix(i, 0) = static_cast<double>(start_idx + i); // Writing row index at the first column
+        xu_matrix.block(i, 1, 1, xu_vector[0].size()) = xu_vector[i].transpose();
     }
     // Print the resulting matrix
     std::cout << "Resulting matrix:\n"
               << xu_matrix << std::endl;
 
     // Save to CSV
-    saveToCSV(xu_matrix, filename);
-    saveToCSV(xu_matrix, global_filename);
+    removeLastRows_saveToCSV(xu_matrix, filename, start_idx);
+    removeLastRows_saveToCSV(xu_matrix, global_filename, start_idx);
     return 0;
 }

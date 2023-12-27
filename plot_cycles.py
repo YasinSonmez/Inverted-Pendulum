@@ -3,6 +3,7 @@ import re
 import sys
 import pickle
 import matplotlib.pyplot as plt
+import numpy as np
 
 def find_cycles(file_path, line_number):
     with open(file_path, 'r') as file:
@@ -37,7 +38,8 @@ def find_min_index_above_threshold(timestep_cycles, threshold):
     for index, value in timestep_cycles.items():
         if value > threshold and index < min_index:
             min_index = index
-    return min_index if min_index != float('inf') else None
+    sorted_indices = np.array(sorted(timestep_cycles.keys()))
+    return min_index if min_index != float('inf') else sorted_indices[-1] + 1
 
 def load_or_create_cumulative_dict(parent_directory):
     grandparent_directory = os.path.abspath(os.path.join(parent_directory, '..'))
@@ -46,7 +48,7 @@ def load_or_create_cumulative_dict(parent_directory):
         with open(cumulative_file_path, 'rb') as file:
             cumulative_dict = pickle.load(file)
     else:
-        cumulative_dict = {}
+        cumulative_dict = []
     return cumulative_dict, cumulative_file_path
 
 def save_cumulative_dict(cumulative_dict, file_path):
@@ -54,35 +56,40 @@ def save_cumulative_dict(cumulative_dict, file_path):
         pickle.dump(cumulative_dict, file)
 
 def plot_cumulative_dict(cumulative_dict, save_path, nominal_timestep):
-    sorted_indices = sorted(cumulative_dict.keys())
-    sorted_values = [cumulative_dict[index] for index in sorted_indices]
-
     # Set a larger figure size
     plt.figure(figsize=(10, 6))
-
-    plt.plot(sorted_indices, sorted_values, marker='o', linestyle='-', color='b')
+    for i, dictionary in enumerate(cumulative_dict):
+        sorted_indices = np.array(sorted(dictionary.keys()))
+        sorted_values = np.array([dictionary[index] for index in sorted_indices])
+        # only print one above threshold
+        if i < len(cumulative_dict)-1:
+            min_index = find_min_index_above_threshold(cumulative_dict[i], nominal_timestep)
+            filter = sorted_indices < (min_index+1)
+            sorted_indices = sorted_indices[filter]
+            sorted_values = sorted_values[filter]
+        plt.plot(sorted_indices, sorted_values, marker='o', linestyle='-')
     
     # Highlight the minimum index where computation time exceeds the threshold
-    min_index = find_min_index_above_threshold(cumulative_dict, nominal_timestep)
-    if min_index is not None:
-        min_value = cumulative_dict[min_index]
+    last_dict = cumulative_dict[-1]
+    min_index = find_min_index_above_threshold(last_dict, nominal_timestep)
+    sorted_indices = np.array(sorted(last_dict.keys()))
+    if min_index != sorted_indices[-1] + 1:
+        min_value = last_dict[min_index]
         plt.scatter([min_index], [min_value], color='red', label=f'Min Index ({min_index})', zorder=5)
-    else:
-        min_index = sorted_indices[-1]
     # Plot horizontal line for nominal_timestep
-    #plt.axhline(y=nominal_timestep, color='green', linestyle='--', label=f'Nominal Timestep ({nominal_timestep} ms)', zorder=5)
+    plt.axhline(y=nominal_timestep, color='green', linestyle='--', label=f'Nominal Timestep ({nominal_timestep} ms)', zorder=5)
 
     # Adjust text sizes
-    plt.title('Cumulative Computation Time in milliseconds', fontsize=16)
-    plt.xlabel('Timestep Index', fontsize=14)
-    plt.ylabel('Cumulative Computation Time (ms)', fontsize=14)
+    plt.title('Computation Time', fontsize=16)
+    plt.xlabel('Timestep', fontsize=14)
+    plt.ylabel('Computation Time (ms)', fontsize=14)
     
     # Adjust tick label sizes
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=12)
 
     # Add legend
-    #plt.legend()
+    plt.legend()
 
     plt.savefig(save_path)
     #plt.show()
@@ -96,19 +103,20 @@ if __name__ == "__main__":
     root_directory = sys.argv[1]
     line_number = 5
     clock_speed = 2e9
-    nominal_timestep = 0.01  # in milliseconds
+    nominal_timestep = 10  # in milliseconds
 
     cumulative_dict, cumulative_file_path = load_or_create_cumulative_dict(os.path.dirname(root_directory))
     
     timestep_cycles = traverse_directories(root_directory, line_number, clock_speed, nominal_timestep)
 
-    for index, value in timestep_cycles.items():
-        if index in cumulative_dict:
-            cumulative_dict[index] = value
-        else:
-            cumulative_dict[index] = value
+    # for index, value in timestep_cycles.items():
+    #     if index in cumulative_dict:
+    #         cumulative_dict[index] = value
+    #     else:
+    #         cumulative_dict[index] = value
+    cumulative_dict.append(timestep_cycles)
 
     save_cumulative_dict(cumulative_dict, cumulative_file_path)
     min_index = plot_cumulative_dict(cumulative_dict, os.path.join(os.path.dirname(root_directory), 'cumulative_plot.png'), nominal_timestep)
 
-    print(min_index - 1)
+    print(min_index)
