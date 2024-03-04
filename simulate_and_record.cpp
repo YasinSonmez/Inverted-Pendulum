@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
     optimal.R_ = Eigen::MatrixXd::Identity(1, 1);
     optimal.Compute();
 
-    Load font
+    // Load font
     sf::Font font;
     if (!font.loadFromFile("Roboto-Regular.ttf"))
     {
@@ -396,7 +396,7 @@ int main(int argc, char *argv[])
 
         const std::string msg = std::to_string(time);
         text.setString("Time   " + msg.substr(0, msg.find('.') + 2));
-        Update SFML drawings
+        // Update SFML drawings
         cart.setPosition(320.0F + 100 * x(0), 240.0F);
         pole.setPosition(320.0F + 100 * x(0), 240.0F);
         pole.setRotation(to_degrees(-x(1)));
