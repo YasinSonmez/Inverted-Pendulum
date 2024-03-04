@@ -1,7 +1,8 @@
 #ifndef INVERTED_PENDULUM_H_
 #define INVERTED_PENDULUM_H_
 
-#include "Eigen/Dense"
+//#include "Eigen/Dense"
+#include <Eigen/Dense>
 
 class InvertedPendulum {
  public:

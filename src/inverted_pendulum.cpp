@@ -1,6 +1,6 @@
 #include "inverted_pendulum.h"
 
-#include "Eigen/Dense"
+//#include "Eigen/Dense"
 
 InvertedPendulum::InvertedPendulum(double M, double m, double J, double l,
                                    double c, double gamma, Eigen::VectorXd x_0)
