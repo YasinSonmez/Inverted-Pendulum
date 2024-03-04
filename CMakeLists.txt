@@ -5,8 +5,8 @@ project(main)
 link_directories($ENV{DYNAMORIO_HOME}/tools/lib64/release)
 link_directories($ENV{DYNAMORIO_HOME}/ext/lib64/release)
 
-link_directories(${PROJECT_SOURCE_DIR}/include/eigen)
-include_directories(${PROJECT_SOURCE_DIR}/include/eigen)
+link_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/include)
 
 if(COMMAND cmake_policy)
 	cmake_policy(SET CMP0003 NEW)
@@ -25,7 +25,7 @@ add_executable(simulate_and_record simulate_and_record.cpp)
 
 # MPC package
 # Set the MPC++ package path
-include_directories(home/yasin/libmpc-0.4.0/include)
+# include_directories(home/yasin/libmpc-0.4.0/include)
 
 
 find_package(DynamoRIO)
@@ -76,6 +76,7 @@ use_DynamoRIO_static_client(main drcovlib_static)
 # Add executable to open game environment
 find_package(SFML COMPONENTS graphics window system REQUIRED)
 target_link_libraries(main source sfml-graphics sfml-window sfml-system mpc++)
+target_link_libraries(simulate_and_record source sfml-graphics sfml-window sfml-system mpc++)
 # target_link_libraries(main source mpc++)
 # target_link_libraries(simulate_and_record source mpc++)
 
