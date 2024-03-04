@@ -1,4 +1,4 @@
-// #include <SFML/Graphics.hpp>
+#include <SFML/Graphics.hpp>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -293,13 +293,13 @@ int main(int argc, char *argv[])
     optimal.R_ = Eigen::MatrixXd::Identity(1, 1);
     optimal.Compute();
 
-    // Load font
-    // sf::Font font;
-    // if (!font.loadFromFile("Roboto-Regular.ttf"))
-    // {
-    //     std::cout << "Failed to load font!\n";
-    // }
-    // sf::RenderWindow window(sf::VideoMode(640, 480), "Inverted Pendulum");
+    Load font
+    sf::Font font;
+    if (!font.loadFromFile("Roboto-Regular.ttf"))
+    {
+        std::cout << "Failed to load font!\n";
+    }
+    sf::RenderWindow window(sf::VideoMode(640, 480), "Inverted Pendulum");
 
     // Create text to display simulation time
     sf::Text text;
@@ -396,18 +396,18 @@ int main(int argc, char *argv[])
 
         const std::string msg = std::to_string(time);
         text.setString("Time   " + msg.substr(0, msg.find('.') + 2));
-        // Update SFML drawings
-        // cart.setPosition(320.0F + 100 * x(0), 240.0F);
-        // pole.setPosition(320.0F + 100 * x(0), 240.0F);
-        // pole.setRotation(to_degrees(-x(1)));
+        Update SFML drawings
+        cart.setPosition(320.0F + 100 * x(0), 240.0F);
+        pole.setPosition(320.0F + 100 * x(0), 240.0F);
+        pole.setRotation(to_degrees(-x(1)));
 
-        // window.clear(sf::Color::White);
-        // window.draw(track);
-        // window.draw(cart);
-        // window.draw(pole);
-        // window.draw(text);
-        // window.draw(type);
-        // window.display();
+        window.clear(sf::Color::White);
+        window.draw(track);
+        window.draw(cart);
+        window.draw(pole);
+        window.draw(text);
+        window.draw(type);
+        window.display();
     }
     // Record the last state
     // Get state
