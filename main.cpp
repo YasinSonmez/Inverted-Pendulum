@@ -3,12 +3,12 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "Eigen/Dense"
+#include <Eigen/Dense>
 #include "inverted_pendulum.h"
 #include "tools.h"
 #include "pid.h"
 #include "lqr.h"
-#include "mpc/NLMPC.hpp"
+#include <mpc/NLMPC.hpp>
 #include <nlohmann/json.hpp>
 #include "dr_api.h"
 
