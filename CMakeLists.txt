@@ -75,8 +75,10 @@ use_DynamoRIO_static_client(main drcovlib_static)
 
 # Add executable to open game environment
 find_package(SFML COMPONENTS graphics window system REQUIRED)
-target_link_libraries(main source sfml-graphics sfml-window sfml-system mpc++)
-target_link_libraries(simulate_and_record source sfml-graphics sfml-window sfml-system mpc++)
+# target_link_libraries(main source sfml-graphics sfml-window sfml-system mpc++)
+target_link_libraries(main source sfml-graphics sfml-window sfml-system)
+# target_link_libraries(simulate_and_record source sfml-graphics sfml-window sfml-system mpc++)
+target_link_libraries(simulate_and_record source sfml-graphics sfml-window sfml-system)
 # target_link_libraries(main source mpc++)
 # target_link_libraries(simulate_and_record source mpc++)
 
