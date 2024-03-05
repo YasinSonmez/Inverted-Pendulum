@@ -8,6 +8,9 @@ link_directories($ENV{DYNAMORIO_HOME}/ext/lib64/release)
 link_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
+include_directories(/usr/local/include)
+link_directories(/usr/local/lib)
+
 if(COMMAND cmake_policy)
 	cmake_policy(SET CMP0003 NEW)
 endif(COMMAND cmake_policy)
