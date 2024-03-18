@@ -294,50 +294,50 @@ int main(int argc, char *argv[])
     optimal.Compute();
 
     // Load font
-    sf::Font font;
-    if (!font.loadFromFile("Roboto-Regular.ttf"))
-    {
-        std::cout << "Failed to load font!\n";
-    }
-    sf::RenderWindow window(sf::VideoMode(640, 480), "Inverted Pendulum");
+    // sf::Font font;
+    // if (!font.loadFromFile("Roboto-Regular.ttf"))
+    // {
+    //     std::cout << "Failed to load font!\n";
+    // }
+    // sf::RenderWindow window(sf::VideoMode(640, 480), "Inverted Pendulum");
 
     // Create text to display simulation time
-    sf::Text text;
-    text.setFont(font);
-    text.setCharacterSize(24);
-    const sf::Color grey = sf::Color(0x7E, 0x7E, 0x7E);
-    text.setFillColor(grey);
-    text.setPosition(480.0F, 360.0F);
+    // sf::Text text;
+    // text.setFont(font);
+    // text.setCharacterSize(24);
+    // const sf::Color grey = sf::Color(0x7E, 0x7E, 0x7E);
+    // text.setFillColor(grey);
+    // text.setPosition(480.0F, 360.0F);
 
     // Create text to display controller type
-    sf::Text type;
-    type.setFont(font);
-    type.setCharacterSize(24);
-    const sf::Color turquoise = sf::Color(0x06, 0xC2, 0xAC);
-    type.setFillColor(turquoise);
-    type.setPosition(480.0F, 384.0F);
-    type.setString(controller);
+    // sf::Text type;
+    // type.setFont(font);
+    // type.setCharacterSize(24);
+    // const sf::Color turquoise = sf::Color(0x06, 0xC2, 0xAC);
+    // type.setFillColor(turquoise);
+    // type.setPosition(480.0F, 384.0F);
+    // type.setString(controller);
 
-    // Create a track for the cart
-    sf::RectangleShape track(sf::Vector2f(640.0F, 2.0F));
-    track.setOrigin(320.0F, 1.0F);
-    track.setPosition(320.0F, 240.0F);
-    const sf::Color light_grey = sf::Color(0xAA, 0xAA, 0xAA);
-    track.setFillColor(light_grey);
+    // // Create a track for the cart
+    // sf::RectangleShape track(sf::Vector2f(640.0F, 2.0F));
+    // track.setOrigin(320.0F, 1.0F);
+    // track.setPosition(320.0F, 240.0F);
+    // const sf::Color light_grey = sf::Color(0xAA, 0xAA, 0xAA);
+    // track.setFillColor(light_grey);
 
-    // Create the cart of the inverted pendulum
-    sf::RectangleShape cart(sf::Vector2f(100.0F, 100.0F));
-    cart.setOrigin(50.0F, 50.0F);
-    cart.setPosition(320.0F, 240.0F);
-    cart.setFillColor(sf::Color::Black);
+    // // Create the cart of the inverted pendulum
+    // sf::RectangleShape cart(sf::Vector2f(100.0F, 100.0F));
+    // cart.setOrigin(50.0F, 50.0F);
+    // cart.setPosition(320.0F, 240.0F);
+    // cart.setFillColor(sf::Color::Black);
 
-    // Create the pole of the inverted pendulum
-    sf::RectangleShape pole(sf::Vector2f(20.0F, 200.0F));
-    pole.setOrigin(10.0F, 200.0F);
-    pole.setPosition(320.0F, 240.0F);
-    pole.setRotation(-theta_0);
-    const sf::Color brown = sf::Color(0xCC, 0x99, 0x66);
-    pole.setFillColor(brown);
+    // // Create the pole of the inverted pendulum
+    // sf::RectangleShape pole(sf::Vector2f(20.0F, 200.0F));
+    // pole.setOrigin(10.0F, 200.0F);
+    // pole.setPosition(320.0F, 240.0F);
+    // pole.setRotation(-theta_0);
+    // const sf::Color brown = sf::Color(0xCC, 0x99, 0x66);
+    // pole.setFillColor(brown);
 
     // Create a clock to run the simulation
     sf::Clock clock;
@@ -394,20 +394,20 @@ int main(int argc, char *argv[])
         // Apply input to the system
         ptr->Update(time, u);
 
-        const std::string msg = std::to_string(time);
-        text.setString("Time   " + msg.substr(0, msg.find('.') + 2));
-        // Update SFML drawings
-        cart.setPosition(320.0F + 100 * x(0), 240.0F);
-        pole.setPosition(320.0F + 100 * x(0), 240.0F);
-        pole.setRotation(to_degrees(-x(1)));
+        // const std::string msg = std::to_string(time);
+        // text.setString("Time   " + msg.substr(0, msg.find('.') + 2));
+        // // Update SFML drawings
+        // cart.setPosition(320.0F + 100 * x(0), 240.0F);
+        // pole.setPosition(320.0F + 100 * x(0), 240.0F);
+        // pole.setRotation(to_degrees(-x(1)));
 
-        window.clear(sf::Color::White);
-        window.draw(track);
-        window.draw(cart);
-        window.draw(pole);
-        window.draw(text);
-        window.draw(type);
-        window.display();
+        // window.clear(sf::Color::White);
+        // window.draw(track);
+        // window.draw(cart);
+        // window.draw(pole);
+        // window.draw(text);
+        // window.draw(type);
+        // window.display();
     }
     // Record the last state
     // Get state

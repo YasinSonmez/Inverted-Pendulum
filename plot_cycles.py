@@ -28,9 +28,8 @@ def traverse_directories(root_directory, line_number, clock_speed, nominal_times
                 if cycles is not None:
                     timestep_name = os.path.basename(dirpath)
                     timestep_index = int(timestep_name.split('_')[1])
-                    computation_time_ms = cycles / clock_speed
-                    timestep_cycles[timestep_index] = computation_time_ms
-
+                    computation_time_s = cycles / clock_speed
+                    timestep_cycles[timestep_index] = computation_time_s
     return timestep_cycles
 
 def find_min_index_above_threshold(timestep_cycles, threshold):
@@ -77,12 +76,12 @@ def plot_cumulative_dict(cumulative_dict, save_path, nominal_timestep):
         min_value = last_dict[min_index]
         plt.scatter([min_index], [min_value], color='red', label=f'Min Index ({min_index})', zorder=5)
     # Plot horizontal line for nominal_timestep
-    plt.axhline(y=nominal_timestep, color='green', linestyle='--', label=f'Nominal Timestep ({nominal_timestep} ms)', zorder=5)
+    # plt.axhline(y=nominal_timestep, color='green', linestyle='--', label=f'Nominal Timestep ({nominal_timestep} s)', zorder=5)
 
     # Adjust text sizes
     plt.title('Computation Time', fontsize=16)
     plt.xlabel('Timestep', fontsize=14)
-    plt.ylabel('Computation Time (ms)', fontsize=14)
+    plt.ylabel('Computation Time (s)', fontsize=14)
     
     # Adjust tick label sizes
     plt.xticks(fontsize=12)
@@ -103,7 +102,8 @@ if __name__ == "__main__":
     root_directory = sys.argv[1]
     line_number = 5
     clock_speed = 2e9
-    nominal_timestep = 10  # in milliseconds
+    #nominal_timestep = 3.5e-6  # in seconds
+    nominal_timestep = 0.1  # in seconds
 
     cumulative_dict, cumulative_file_path = load_or_create_cumulative_dict(os.path.dirname(root_directory))
     

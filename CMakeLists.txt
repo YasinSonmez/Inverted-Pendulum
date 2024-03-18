@@ -11,6 +11,9 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(/usr/local/include)
 link_directories(/usr/local/lib)
 
+# Find the NLopt library (optional, only if find_package doesn't work as expected)
+find_package(NLopt REQUIRED)
+
 if(COMMAND cmake_policy)
 	cmake_policy(SET CMP0003 NEW)
 endif(COMMAND cmake_policy)
@@ -79,9 +82,9 @@ use_DynamoRIO_static_client(main drcovlib_static)
 # Add executable to open game environment
 find_package(SFML COMPONENTS graphics window system REQUIRED)
 # target_link_libraries(main source sfml-graphics sfml-window sfml-system mpc++)
-target_link_libraries(main source sfml-graphics sfml-window sfml-system)
+target_link_libraries(main source sfml-graphics sfml-window sfml-system nlopt)
 # target_link_libraries(simulate_and_record source sfml-graphics sfml-window sfml-system mpc++)
-target_link_libraries(simulate_and_record source sfml-graphics sfml-window sfml-system)
+target_link_libraries(simulate_and_record source sfml-graphics sfml-window sfml-system nlopt)
 # target_link_libraries(main source mpc++)
 # target_link_libraries(simulate_and_record source mpc++)
 
