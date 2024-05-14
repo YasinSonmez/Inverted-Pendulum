@@ -26,8 +26,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 # Add library
 add_subdirectory(src)
 
-add_executable(main main.cpp)
-add_executable(simulate_and_record simulate_and_record.cpp)
+add_executable(inverted_pendulum_simulation inverted_pendulum_simulation.cpp)
+#add_executable(acc_controller acc_controller.cpp)
 
 # MPC package
 # Set the MPC++ package path
@@ -54,42 +54,86 @@ if (liblz4)
   message(STATUS "Found liblz4: ${liblz4}")
 endif ()
 
-configure_DynamoRIO_static(main)
+# Find OSQP library and headers
+find_package(osqp REQUIRED)
+if(osqp_FOUND)
+    message(STATUS "Found osqp")
+    message(STATUS "osqp include dir: ${OSQP_INCLUDE_DIR}")
+    message(STATUS "osqp library dir: ${OSQP_LIBRARIES}")
+else()
+    message(FATAL_ERROR "Could not locate osqp")
+endif()
 
-use_DynamoRIO_static_client(main drmemtrace_static)
+# Include the external libraries to the project
+# This is necessary to include the headers of the external libraries
+set(EXTERN_INCLUDE_DIRS ${OSQP_INCLUDE_DIR}) 
 
-if (ZLIB_FOUND)
-  target_link_libraries(main ${ZLIB_LIBRARIES})
-endif ()
-if (libsnappy)
-  target_link_libraries(main snappy)
-endif ()
-if (liblz4)
-  target_link_libraries(main lz4)
-endif ()
+include_directories(${EXTERN_INCLUDE_DIRS} "include")
 
-use_DynamoRIO_static_client(main drmgr_static)
-use_DynamoRIO_static_client(main drreg_static)
-use_DynamoRIO_static_client(main drbbdup_static)
-use_DynamoRIO_static_client(main drutil_static)
-use_DynamoRIO_static_client(main drx_static)
-use_DynamoRIO_static_client(main drwrap_static)
-use_DynamoRIO_static_client(main drsyms_static)
-use_DynamoRIO_static_client(main drpttracer_static)
-use_DynamoRIO_static_client(main drstatecmp_static)
-use_DynamoRIO_static_client(main drcovlib_static)
+configure_DynamoRIO_global(OFF ON)
+# configure_DynamoRIO_static(inverted_pendulum_simulation)
+# configure_DynamoRIO_static(acc_controller)
+
+# use_DynamoRIO_static_client(inverted_pendulum_simulation drmemtrace_static)
+
+# if (ZLIB_FOUND)
+#   target_link_libraries(inverted_pendulum_simulation ${ZLIB_LIBRARIES})
+# endif ()
+# if (libsnappy)
+#   target_link_libraries(inverted_pendulum_simulation snappy)
+# endif ()
+# if (liblz4)
+#   target_link_libraries(inverted_pendulum_simulation lz4)
+# endif ()
+
+# use_DynamoRIO_static_client(inverted_pendulum_simulation drmgr_static)
+# use_DynamoRIO_static_client(inverted_pendulum_simulation drreg_static)
+# use_DynamoRIO_static_client(inverted_pendulum_simulation drbbdup_static)
+# use_DynamoRIO_static_client(inverted_pendulum_simulation drutil_static)
+# use_DynamoRIO_static_client(inverted_pendulum_simulation drx_static)
+# use_DynamoRIO_static_client(inverted_pendulum_simulation drwrap_static)
+# use_DynamoRIO_static_client(inverted_pendulum_simulation drsyms_static)
+# use_DynamoRIO_static_client(inverted_pendulum_simulation drpttracer_static)
+# use_DynamoRIO_static_client(inverted_pendulum_simulation drstatecmp_static)
+# use_DynamoRIO_static_client(inverted_pendulum_simulation drcovlib_static)
+
+# Define a function to link DynamoRIO static clients to a target
+function(link_dynamoRIO_clients target)
+  configure_DynamoRIO_static(${target})
+
+  use_DynamoRIO_static_client(${target} drmemtrace_static)
+
+  if (ZLIB_FOUND)
+    target_link_libraries(${target} ${ZLIB_LIBRARIES})
+  endif ()
+  if (libsnappy)
+    target_link_libraries(${target} snappy)
+  endif ()
+  if (liblz4)
+    target_link_libraries(${target} lz4)
+  endif ()
+  use_DynamoRIO_static_client(${target} drmgr_static)
+  use_DynamoRIO_static_client(${target} drreg_static)
+  use_DynamoRIO_static_client(${target} drbbdup_static)
+  use_DynamoRIO_static_client(${target} drutil_static)
+  use_DynamoRIO_static_client(${target} drx_static)
+  use_DynamoRIO_static_client(${target} drwrap_static)
+  use_DynamoRIO_static_client(${target} drsyms_static)
+  use_DynamoRIO_static_client(${target} drpttracer_static)
+  use_DynamoRIO_static_client(${target} drstatecmp_static)
+  use_DynamoRIO_static_client(${target} drcovlib_static)
+endfunction()
+
+# Link static clients to the original executable
+link_dynamoRIO_clients(inverted_pendulum_simulation)
+#link_dynamoRIO_clients(acc_controller)
 
 # Add executable to open game environment
 find_package(SFML COMPONENTS graphics window system REQUIRED)
-# target_link_libraries(main source sfml-graphics sfml-window sfml-system mpc++)
-target_link_libraries(main source sfml-graphics sfml-window sfml-system nlopt)
-# target_link_libraries(simulate_and_record source sfml-graphics sfml-window sfml-system mpc++)
-target_link_libraries(simulate_and_record source sfml-graphics sfml-window sfml-system nlopt)
-# target_link_libraries(main source mpc++)
-# target_link_libraries(simulate_and_record source mpc++)
+target_link_libraries(inverted_pendulum_simulation source sfml-graphics sfml-window sfml-system nlopt)
+#target_link_libraries(acc_controller source sfml-graphics sfml-window sfml-system nlopt)
 
-# Additional resources like images and fonts
-configure_file(res/Roboto-Regular.ttf Roboto-Regular.ttf COPYONLY)
-
-#set_target_properties(main PROPERTIES CXX_STANDARD 20 CXX_EXTENSIONS OFF)
-#set_target_properties(simulate_and_record PROPERTIES CXX_STANDARD 20 CXX_EXTENSIONS OFF)
+# Link static clients to the acc version executable
+add_executable(acc_controller acc_controller.cpp)
+link_dynamoRIO_clients(acc_controller)
+target_link_libraries(acc_controller source sfml-graphics sfml-window sfml-system nlopt osqp::osqp)
