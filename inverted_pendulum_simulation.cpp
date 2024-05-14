@@ -10,6 +10,8 @@
 #include "lqr.h"
 #include <mpc/NLMPC.hpp>
 #include <nlohmann/json.hpp>
+#include <iomanip> // Include for setprecision
+#include <cstdlib> // for exit()
 #include "dr_api.h"
 
 using json = nlohmann::json;
@@ -21,6 +23,60 @@ bool my_setenv(const char *var, const char *value)
 #else
     return SetEnvironmentVariable(var, value) == TRUE;
 #endif
+}
+
+void removeLastRows_saveToCSV(const Eigen::MatrixXd &matrix, const std::string &filename, int start_idx)
+{
+    // Read existing content (first start_idx rows)
+    std::ifstream existingFile(filename);
+    std::vector<std::string> existingContent;
+
+    if (existingFile.is_open())
+    {
+        std::string line;
+        for (size_t i = 0; i < start_idx; ++i)
+        {
+            std::getline(existingFile, line);
+            existingContent.push_back(line);
+        }
+        existingFile.close();
+    }
+    else
+    {
+        std::cerr << "Error opening file for reading, will create a new file if not exists: " << filename << std::endl;
+    }
+
+    // Open the file in truncate mode to clear existing content
+    std::ofstream file(filename, std::ios::trunc);
+
+    if (!file.is_open())
+    {
+        std::cerr << "Error opening file for writing: " << filename << std::endl;
+        return;
+    }
+
+    // Ensure high precision for floating-point numbers
+    file << std::fixed << std::setprecision(15);
+
+    // Write back the existing content (first start_idx rows)
+    for (const auto& line : existingContent)
+    {
+        file << line << "\n";
+    }
+
+    // Write the new matrix content to the file
+    for (int i = 0; i < matrix.rows(); ++i)
+    {
+        for (int j = 0; j < matrix.cols(); ++j)
+        {
+            if (j > 0)
+                file << ",";
+            file << matrix(i, j);
+        }
+        file << "\n";
+    }
+
+    file.close();
 }
 
 Eigen::MatrixXd loadFromCSV(const std::string &filename)
@@ -84,14 +140,13 @@ int main(int argc, char *argv[])
     // Parse the JSON string
     json params = json::parse(str);
 
-    // filename to laod matrix
+    // filename to save matrix
     std::string filename = "../state_and_input_matrix.csv";
     std::string global_filename = "../../state_and_input_matrix.csv";
 
     // Access the parameters and create variables for them
     std::string controller = params["controller"];
-    bool record_trace = params["record_trace"];
-    const double control_frequecy = params["control_frequency"];
+    const double control_sampling_time = params["control_sampling_time"];
     int simulation_steps = params["simulation_steps"];
     const double p_0 = params["p_0"];
     const double theta_0 = params["theta_0"];
@@ -104,32 +159,51 @@ int main(int argc, char *argv[])
     double gamma = params["gamma"];
     double g = params["g"];
 
+    bool record_trace = false;
+    bool restart = false;
     // Create a vector to store x_t, u_t in each iteration
+    std::vector<Eigen::VectorXd> xu_vector;
     Eigen::VectorXd x_0(4);
     int start_idx = 0;
     double u_start = 0;
+    // If we start from an initial condition and not from csv
     if (argc == 1)
     {
         x_0 << p_0, to_radians(theta_0), 0, 0;
     }
     else if (argc >= 2)
     {
+        if (argc >= 4 && std::stoi(argv[3])==1)
+        {
+            // If this argument is given then trace
+            record_trace = true;
+            global_filename = "../../../state_and_input_matrix.csv";
+        }
+        if (argc >= 5 && std::stoi(argv[4])==1)
+        {
+            // If this argument is given then restart from the last step
+            restart = true;
+        }
         Eigen::MatrixXd xu_matrix_tmp;
-        xu_matrix_tmp = loadFromCSV(global_filename);
         start_idx = std::stoi(argv[1]);
-        x_0 << xu_matrix_tmp(start_idx, 1), xu_matrix_tmp(start_idx, 2),
-            xu_matrix_tmp(start_idx, 3), xu_matrix_tmp(start_idx, 4);
+        if (start_idx == 0)
+        {
+            x_0 << p_0, to_radians(theta_0), 0, 0;
+        }
+        else
+        {
+            xu_matrix_tmp = loadFromCSV(global_filename);
+            x_0 << xu_matrix_tmp(start_idx-1, 1), xu_matrix_tmp(start_idx-1, 2),
+                xu_matrix_tmp(start_idx-1, 3), xu_matrix_tmp(start_idx-1, 4);
+            u_start = xu_matrix_tmp(start_idx-1, 5);
+        }
+
         if (argc >= 3)
         {
             simulation_steps = std::stoi(argv[2]);
         }
-        if (argc == 4)
-        {
-            // If a 4th argument is given, use the last control input
-            u_start = xu_matrix_tmp(start_idx - 1, 5);
-        }
     }
-
+    std::cout << "Doing simulation for this number of timesteps: " << simulation_steps << std::endl;
     // Create a model with default parameters
     InvertedPendulum *ptr = new InvertedPendulum(M, m, J, l, c, gamma, x_0);
 
@@ -142,7 +216,7 @@ int main(int argc, char *argv[])
     constexpr int ctrl_hor = 5;
     constexpr int ineq_c = 0;
     constexpr int eq_c = 0;
-    double sampling_time = params["MPC"]["sampling_time"];
+    double sampling_time = params["control_sampling_time"];
     double input_cost_weight = params["MPC"]["input_cost_weight"];
 
     mpc::NLMPC<num_states, num_inputs, num_output, pred_hor, ctrl_hor, ineq_c, eq_c> optsolver;
@@ -229,61 +303,90 @@ int main(int argc, char *argv[])
 
     // Create a clock to run the simulation
     sf::Clock clock;
-    float time = clock.getElapsedTime().asSeconds();
-    float last_input_update_time = 0;
-    int roi_count = 0;
-    double u = 0;
+    float time = 0;
+    int timestep = 0;
+    double u = u_start;
+
+    // Get last state
+    Eigen::VectorXd x = ptr->GetState();
+
+    // Record state and input x_t,u_t
+    Eigen::VectorXd xu(x.size() + 1);
+    xu << x, u;
+    // Add the zero input to the beginning
+    if(start_idx==0)
+        xu_vector.push_back(xu);
+    // Apply input to the system according to last timestep measurements
+    ptr->Update(time, u);
 
     // Simulation loop
-    while (roi_count < simulation_steps)
+    while (timestep < simulation_steps)
     {
-        // Update the simulation
-        time = clock.getElapsedTime().asSeconds();
-
-        // Get state
-        Eigen::VectorXd x = ptr->GetState();
-
-        // Control calculations every 1/CONTROL_REQUENCY seconds
-        if (time - last_input_update_time > 1.0 / control_frequecy || roi_count == 0)
+        // Control calculations starts here
+        if (record_trace)
         {
-            // Control calculations starts here
-            if (record_trace)
-            {
-                dr_app_setup_and_start();
-            }
-            if (argc == 4 && roi_count == 0)
-            {
-                // If a 4th argument is given, use the last control input
-                u = u_start;
-            }
-            else if (controller == "PID")
-            {
-                double angle = x(1);
-                double error = 0.0F - angle;
-                c_ptr->UpdateError(time, error);
-                u = c_ptr->TotalError();
-            }
-            else if (controller == "LQR")
-            {
-                u = optimal.Control(x)(0, 0);
-            }
-            else if (controller == "MPC")
-            {
-                modelX = x;
-                r = optsolver.step(modelX, r.cmd);
-                u = r.cmd(0);
-            }
-            if (record_trace)
-            {
-                dr_app_stop_and_cleanup();
-            }
-            // Print the resulting matrix
-            std::cout << "State :\n"
-                      << x << std::endl;
-            std::cout << "Control output for this timestep: " << u << std::endl;
-            // Control calculations ends here
-            break;
+            dr_app_setup_and_start();
         }
+        if (restart)
+        {
+            u=u_start;
+        }
+        else if (controller == "PID")
+        {
+            double angle = x(1);
+            double error = 0.0F - angle;
+            c_ptr->UpdateError(time, error);
+            u = c_ptr->TotalError();
+        }
+        else if (controller == "LQR")
+        {
+            u = optimal.Control(x)(0, 0);
+        }
+        else if (controller == "MPC")
+        {
+            modelX = x;
+            r = optsolver.step(modelX, r.cmd);
+            u = r.cmd(0);
+        }
+        if (record_trace)
+        {
+            dr_app_stop_and_cleanup();
+            exit(0);
+        }
+        // Control calculations ends here
+
+        // Update the simulation
+        time += control_sampling_time;
+        timestep++;
+        std::cout << "Timestep: " << timestep << std::endl;
+        // Apply input to the system according to last timestep measurements
+        ptr->Update(time, u);
+        x = ptr->GetState();
+
+        // Record state and input x_t,u_t
+        Eigen::VectorXd xu(x.size() + 1);
+        xu << x, u;
+        xu_vector.push_back(xu);
     }
+    // Record the last state
+    // Get state
+    // Eigen::VectorXd x = ptr->GetState();
+    // Eigen::VectorXd xu(x.size() + 1);
+    // xu << x, 0.0;
+    // xu_vector.push_back(xu);
+    Eigen::MatrixXd xu_matrix(xu_vector.size(), xu_vector[0].size() + 1); // +1 for the timestep column
+
+    for (size_t i = 0; i < xu_vector.size(); ++i)
+    {
+        xu_matrix(i, 0) = static_cast<double>(start_idx + i); // Writing row index at the first column
+        xu_matrix.block(i, 1, 1, xu_vector[0].size()) = xu_vector[i].transpose();
+    }
+    // Print the resulting matrix
+    std::cout << "Resulting matrix:\n"
+              << xu_matrix << std::endl;
+
+    // Save to CSV
+    removeLastRows_saveToCSV(xu_matrix, filename, start_idx);
+    removeLastRows_saveToCSV(xu_matrix, global_filename, start_idx);
     return 0;
 }

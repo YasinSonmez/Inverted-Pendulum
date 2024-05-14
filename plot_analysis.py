@@ -78,7 +78,7 @@ def plot_csv_data(filename, save_path, save_path_2, control_sampling_time):
         ax.plot(timestep*control_sampling_time, variables.iloc[:, i])
         ax.scatter(timestep*control_sampling_time, variables.iloc[:, i], label=f'Variable {i+1}')
         ax.set_title(f'Variable {i+1}')
-        ax.set_xlabel('Simulation Time(s)')
+        ax.set_xlabel('Time(s)')
         ax.set_ylabel('Value')
         ax.grid()
     
@@ -100,7 +100,7 @@ def plot_csv_data(filename, save_path, save_path_2, control_sampling_time):
             ax.set_title(f'Variable {i+1} vs Variable {j+1}')
             ax.set_xlabel(f'Variable {i+1}')
             ax.set_ylabel(f'Variable {j+1}')
-            fig.colorbar(sc, ax=ax, label='Time (s)')
+            fig.colorbar(sc, ax=ax, label='Timestep')
             ax.grid()
 
     plt.tight_layout()
@@ -127,13 +127,13 @@ def plot_cumulative_dict(cumulative_dict, save_path, control_sampling_time):
     sorted_indices = np.array(sorted(last_dict.keys()))
     if min_index != sorted_indices[-1] + 1:
         min_value = last_dict[min_index]
-        plt.scatter([min_index*control_sampling_time], [min_value], color='red', label=f'Min Index ({min_index})', zorder=5)
+        plt.scatter([min_index], [min_value], color='red', label=f'Min Index ({min_index})', zorder=5)
     # Plot horizontal line for control_sampling_time
-    plt.axhline(y=control_sampling_time, color='green', linestyle='--', label=f'Sampling Time ({control_sampling_time} s)', zorder=5)
+    # plt.axhline(y=control_sampling_time, color='green', linestyle='--', label=f'Sampling Time ({control_sampling_time} s)', zorder=5)
 
     # Adjust text sizes
     plt.title('Computation Time', fontsize=16)
-    plt.xlabel('Simulation Time (s)', fontsize=14)
+    plt.xlabel('Timestep', fontsize=14)
     plt.ylabel('Computation Time (s)', fontsize=14)
     
     # Adjust tick label sizes
@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
     root_directory = sys.argv[1]
     control_sampling_time = float(sys.argv[2])
-    line_number = 9 # Line number where the EXECUTION_TIME is
+    line_number = 7
 
     cumulative_dict, cumulative_file_path = load_or_create_cumulative_dict(os.path.dirname(root_directory))
     
@@ -173,4 +173,4 @@ if __name__ == "__main__":
     grandparent_directory = os.path.abspath(os.path.join(os.path.dirname(root_directory), '..'))
     state_and_input_matrix_file_path = os.path.join(grandparent_directory, 'state_and_input_matrix.csv')
     plot_csv_data(state_and_input_matrix_file_path, os.path.join(os.path.dirname(root_directory), 'cumulative_state_and_input_plot.png'), os.path.join(os.path.dirname(root_directory), 'cumulative_pairwise_plot.png'), control_sampling_time)
-    print(min_index) # revert this
+    print(min_index)

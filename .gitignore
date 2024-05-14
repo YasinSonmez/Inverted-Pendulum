@@ -36,3 +36,5 @@ build/
 
 # Visual Studio Code workspace
 .vscode/
+.*
+!.gitignore
