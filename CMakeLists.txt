@@ -27,12 +27,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 add_subdirectory(src)
 
 add_executable(inverted_pendulum_simulation inverted_pendulum_simulation.cpp)
-#add_executable(acc_controller acc_controller.cpp)
-
-# MPC package
-# Set the MPC++ package path
-# include_directories(home/yasin/libmpc-0.4.0/include)
-
 
 find_package(DynamoRIO)
 if (NOT DynamoRIO_FOUND)
@@ -71,31 +65,6 @@ set(EXTERN_INCLUDE_DIRS ${OSQP_INCLUDE_DIR})
 include_directories(${EXTERN_INCLUDE_DIRS} "include")
 
 configure_DynamoRIO_global(OFF ON)
-# configure_DynamoRIO_static(inverted_pendulum_simulation)
-# configure_DynamoRIO_static(acc_controller)
-
-# use_DynamoRIO_static_client(inverted_pendulum_simulation drmemtrace_static)
-
-# if (ZLIB_FOUND)
-#   target_link_libraries(inverted_pendulum_simulation ${ZLIB_LIBRARIES})
-# endif ()
-# if (libsnappy)
-#   target_link_libraries(inverted_pendulum_simulation snappy)
-# endif ()
-# if (liblz4)
-#   target_link_libraries(inverted_pendulum_simulation lz4)
-# endif ()
-
-# use_DynamoRIO_static_client(inverted_pendulum_simulation drmgr_static)
-# use_DynamoRIO_static_client(inverted_pendulum_simulation drreg_static)
-# use_DynamoRIO_static_client(inverted_pendulum_simulation drbbdup_static)
-# use_DynamoRIO_static_client(inverted_pendulum_simulation drutil_static)
-# use_DynamoRIO_static_client(inverted_pendulum_simulation drx_static)
-# use_DynamoRIO_static_client(inverted_pendulum_simulation drwrap_static)
-# use_DynamoRIO_static_client(inverted_pendulum_simulation drsyms_static)
-# use_DynamoRIO_static_client(inverted_pendulum_simulation drpttracer_static)
-# use_DynamoRIO_static_client(inverted_pendulum_simulation drstatecmp_static)
-# use_DynamoRIO_static_client(inverted_pendulum_simulation drcovlib_static)
 
 # Define a function to link DynamoRIO static clients to a target
 function(link_dynamoRIO_clients target)
@@ -126,12 +95,10 @@ endfunction()
 
 # Link static clients to the original executable
 link_dynamoRIO_clients(inverted_pendulum_simulation)
-#link_dynamoRIO_clients(acc_controller)
 
 # Add executable to open game environment
 find_package(SFML COMPONENTS graphics window system REQUIRED)
 target_link_libraries(inverted_pendulum_simulation source sfml-graphics sfml-window sfml-system nlopt)
-#target_link_libraries(acc_controller source sfml-graphics sfml-window sfml-system nlopt)
 
 # Link static clients to the acc version executable
 add_executable(acc_controller acc_controller.cpp)

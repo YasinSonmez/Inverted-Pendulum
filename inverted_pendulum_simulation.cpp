@@ -368,12 +368,8 @@ int main(int argc, char *argv[])
         xu << x, u;
         xu_vector.push_back(xu);
     }
-    // Record the last state
-    // Get state
-    // Eigen::VectorXd x = ptr->GetState();
-    // Eigen::VectorXd xu(x.size() + 1);
-    // xu << x, 0.0;
-    // xu_vector.push_back(xu);
+    
+    // Create a CSV file to store the data
     Eigen::MatrixXd xu_matrix(xu_vector.size(), xu_vector[0].size() + 1); // +1 for the timestep column
 
     for (size_t i = 0; i < xu_vector.size(); ++i)
