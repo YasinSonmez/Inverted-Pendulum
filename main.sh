@@ -6,6 +6,7 @@ scarab_path=$RESOURCES_DIR/scarab
 # Get the current directory of the script
 main_path=$(cd "$(dirname "$0")" && pwd)
 echo "Current path: $main_path"
+echo ""
 
 # Get the script arguments
 start_idx=$1
@@ -23,11 +24,13 @@ control_sampling_time=$(echo "$json" | grep -o '"control_sampling_time": *[0-9.]
 total_timesteps=$(echo "($time_horizon / $control_sampling_time + 0.99999999999)/1" | bc)
 
 echo "control_sampling_time: $control_sampling_time"
-echo "total_timesteps: $total_timesteps\n"
+echo "total_timesteps: $total_timesteps"
+echo ""
 
 # Initialize variables
 current_timestep=1
 num_proc=$(nproc)
+num_proc=3
 current_time=$(date +'%Y-%m-%d_%H-%M-%S')
 exp_path="$main_path/Scarab-Trace-and-Simulate-Script/results/${exp_name}_time_horizon${time_horizon}_control_sampling_time${control_sampling_time}_num_proc${num_proc}/${PARAM_INDEX}_$current_time"
 mkdir -p "$exp_path"
@@ -38,8 +41,9 @@ while [ $current_timestep -lt $total_timesteps ]; do
     cd "$exp_path"
     echo "Current path: $(pwd)"
     echo "Current timestep: $current_timestep"
-    echo "restart_flag: $restart_flag\n"
-    
+    echo "restart_flag: $restart_flag"
+    echo ""
+
     # Run trace.sh with the restart_flag as an argument
     $main_path/Scarab-Trace-and-Simulate-Script/trace.sh $scarab_path $main_path/$7 $current_timestep $num_proc $restart_flag $chip_params_path $controller_params_path $control_sampling_time
 
@@ -69,5 +73,6 @@ while [ $current_timestep -lt $total_timesteps ]; do
     # Update the current timestep
     current_timestep=$new_timestep
     
-    echo "Updated current timestep: $current_timestep\n"
+    echo "Updated current timestep: $current_timestep"
+    echo ""
 done
