@@ -30,7 +30,6 @@ echo ""
 # Initialize variables
 current_timestep=1
 num_proc=$(nproc)
-num_proc=3
 current_time=$(date +'%Y-%m-%d_%H-%M-%S')
 exp_path="$main_path/Scarab-Trace-and-Simulate-Script/results/${exp_name}_time_horizon${time_horizon}_control_sampling_time${control_sampling_time}_num_proc${num_proc}/${PARAM_INDEX}_$current_time"
 mkdir -p "$exp_path"
